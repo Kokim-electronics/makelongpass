@@ -85,28 +85,13 @@ function s_focus() {
     document.getElementsByName("su")[0].checked = true;
 }
 
-
-function copy_fn() {
-    event.target.select();
-    document.execCommand("copy");
-    $(".form_txt").removeClass("active");
-    event.target.classList.add('active');
-}
-
-if ($("#Symbol0").prop("checked") == true) {
-
-}
-
-
 //symbolの制御
 $(function () {
-
 
     //初期設定
     if ($("#Symbol0").prop("checked") == true) {
 
         $("#pulldown").addClass("open");
-
 
         $("#Cbox4").prop("checked", false);
         $("#Cbox5").prop("checked", false);
@@ -154,9 +139,7 @@ $(function () {
         $("#Cbox18").prop("checked",true);
         $("#Cbox19").prop("checked",true);
         */
-
     }
-
 
     //ラジオボタンチェンジイベント
     $("#Symbol0").on("click", function () {
@@ -213,10 +196,8 @@ $(function () {
         $("#Cbox25").prop("checked", true);
     });
 
-
     //Disable1 強力
     $("#Disable1").on("click", function () {
-
 
         $("#Cbox0").prop("checked", true);
         $("#Cbox1").prop("checked", true);
@@ -250,14 +231,10 @@ $(function () {
         $("#Cbox23").prop("checked", false);
         $("#Cbox24").prop("checked", false);
         $("#Cbox25").prop("checked", false);
-
-
     });
-
 
     //Disable2 最強
     $("#Disable2").on("click", function () {
-
 
         $("#Cbox0").prop("checked", true);
         $("#Cbox1").prop("checked", true);
@@ -335,7 +312,6 @@ $(function () {
         //https://color-piece.com/blog/js-random-chars/
         let passArr = new Array();
         const playerList = document.getElementById("playerList");
-
         playerList.innerHTML = "";  // 一度表の中身を空にする
 
         for (let j = 0; j < 10; j++) {
@@ -365,6 +341,7 @@ $(function () {
                 td.textContent = arr;  // arr[1]はvalueの部分
                 if (i == 1) {
                     td.setAttribute("onclick", "this.focus();copy_fn(" + j + ");tos(this)");
+                    td.setAttribute("class", "outpass");
                 }
                 tr.appendChild(td);
             });
@@ -374,9 +351,8 @@ $(function () {
 
 //https://gxy-life.com/2PC/PC/PC20211011.html
 //https://gxy-life.com/2PC/PC/PC20211010.html
-
 function copy_fn(j) {
-    navigator.clipboard.writeText($(".form_txt").eq(j).val());
+    navigator.clipboard.writeText($(".outpass").eq(j).text());
 }
 function tos(td) {
     $("td").css("background-color", "");
