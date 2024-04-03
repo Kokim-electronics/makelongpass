@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="utf-8">
+  <title>makelongpass</title>
+  <meta name="description" content="サイトキャプションを入力">
+  <meta name="keywords" content="サイトキーワードを,で区切って入力">
+  <link rel="stylesheet" href="index.css" type="text/css">
+  <!--[if lt IE 9]>
+		<script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+		<script src="http://css3-mediaqueries-js.googlecode.com/svn/trunk/css3-mediaqueries.js"></script>
+		<![endif]-->
+  <script type="text/javascript" src="jquery-3.7.1.min.js"></script>
+  <script src="index.js"></script>
+</head>
+
+<body>
+  <!----- ヘッダー -----
+  <header>ヘッダー</header>
+  <nav>ナビ</nav>
+  <----- ヘッダー END -----
+
+  <----- メインコンテンツ -----
+  <article>
+    <h1>タイトル</h1>
+    <section>
+      <h2>タイトル</h2>
+      <p>コンテンツの内容</p>
+    </section>
+  </article>
+  <----- メインコンテンツ END -----
+
+  <----- フッター -----
+  <footer>フッター</footer>
+  <----- フッター END ----->
+  <button type="submit" class="btn_form btn_submit" id="make">生成</button>
+  <table class="content-table" border="1" style="border-collapse: collapse">
+    <thead>
+      <tr>
+        <th>No.</th>
+        <th>結果</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="playerList"></tbody> <!-- ここに配列の中身を表示させる -->
+  </table>
+
+  <!--class="randam_gene_block">
+    <div class="randam_gene_block_in">
+      <div class="item_wrap">
+        <input type="text" value="" style="width:150px;" onclick="this.focus();this.select();copy_fn(0)"
+          class="form_txt">
+        <input type="text" value="" style="width:150px;" onclick="this.focus();this.select();copy_fn(1)"
+          class="form_txt">
+        <input type="text" value="" style="width:150px;" onclick="this.focus();this.select();copy_fn(2)"
+          class="form_txt">
+        <input type="text" value="" style="width:150px;" onclick="this.focus();this.select();copy_fn(3)"
+          class="form_txt">
+        <input type="text" value="" style="width:150px;" onclick="this.focus();this.select();copy_fn(4)"
+          class="form_txt">
+        <input type="text" value="" style="width:150px;" onclick="this.focus();this.select();copy_fn(5)"
+          class="form_txt">
+        <input type="text" value="" style="width:150px;" onclick="this.focus();this.select();copy_fn(6)"
+          class="form_txt">
+        <input type="text" value="" style="width:150px;" onclick="this.focus();this.select();copy_fn(7)"
+          class="form_txt">
+        <input type="text" value="" style="width:150px;" onclick="this.focus();this.select();copy_fn(8)"
+          class="form_txt">
+        <input type="text" value="" style="width:150px;" onclick="this.focus();this.select();copy_fn(9)"
+          class="form_txt">
+        <-- /.item_wrap --
+      </div>
+      <-- /.randam_gene_block_in --
+    </div>
+    <-- /.randam_gene_block --
+  </div>
+  -->
+
+  <div class="randam_selects lf">
+    <dl>
+      <dt>強度</dt>
+      <dd>
+        <div class="check_wrap">
+          <input type="radio" id="Enable" name="stg" onclick="enable()" value="0">
+          <i class="shape radio"></i><label class="txt" for="Enable">カスタム</label>
+          <input type="radio" id="Disable1" name="stg" onclick="disable()" value="1">
+          <i class="shape radio"></i><label class="txt" for="Disable1">強力</label>
+          <input type="radio" id="Disable2" name="stg" onclick="disable()" value="2" checked="checked">
+          <i class="shape radio"></i><label class="txt" for="Disable2">最強</label>
+        </div>
+      </dd>
+    </dl>
+    <dl>
+      <dt>文字</dt>
+      <dd>
+        <div class="check_wrap">
+          <input type="checkbox" id="Cbox0" name="str_style[]" value="0" checked="checked">
+          <i class="shape checkbox"></i><label class="txt" for="Cbox0">英字（大文字）</label>
+          <input type="checkbox" id="Cbox1" name="str_style[]" value="1" checked="checked">
+          <i class="shape checkbox"></i><label class="txt" for="Cbox1">英字（小文字）</label>
+          <input type="checkbox" id="Cbox2" name="str_style[]" value="2" checked="checked">
+          <i class="shape checkbox"></i><label class="txt" for="Cbox2">数字</label>
+        </div>
+        <div class="check_wrap"><br></div>
+        <div class="check_wrap">
+          <input type="radio" id="Symbol0" name="symbol" value="0">
+          <i class="shape radio"></i><label class="txt" for="Symbol0">記号なし</label>
+          <input type="radio" id="Symbol1" name="symbol" value="1" checked="checked">
+          <i class="shape radio"></i><label class="txt" for="Symbol1">記号あり</label>
+        </div>
+
+        <div id="pulldown" class="ope open">
+
+          <!--
+                <div class="check_wrap size_s">
+                  <input type="checkbox" id="Cbox3" name="str_style[]" value="3">
+                  <i class="shape checkbox"></i><label class="txt" for="Cbox3">記号</label>
+                </div>
+                -->
+
+          <div class="check_wrap size_s">
+            <input type="checkbox" id="Cbox10" name="str_style[]" value="10" checked="checked">
+            <i class="shape checkbox"></i><label class="txt" for="Cbox10">!（エクスクラメーション）</label>
+            <input type="checkbox" id="Cbox11" name="str_style[]" value="11" checked="checked">
+            <i class="shape checkbox"></i><label class="txt" for="Cbox11">#（シャープ）</label>
+            <input type="checkbox" id="Cbox12" name="str_style[]" value="12" checked="checked">
+            <i class="shape checkbox"></i><label class="txt" for="Cbox12">$（ドル）</label>
+            <input type="checkbox" id="Cbox13" name="str_style[]" value="13" checked="checked">
+            <i class="shape checkbox"></i><label class="txt" for="Cbox13">%（パーセント）</label>
+            <input type="checkbox" id="Cbox15" name="str_style[]" value="15" checked="checked">
+            <i class="shape checkbox"></i><label class="txt" for="Cbox15">(（左かっこ）</label>
+          </div>
+          <div class="check_wrap size_s">
+            <input type="checkbox" id="Cbox16" name="str_style[]" value="16" checked="checked">
+            <i class="shape checkbox"></i><label class="txt" for="Cbox16">)（右かっこ）</label>
+            <input type="checkbox" id="Cbox5" name="str_style[]" value="5" checked="checked">
+            <i class="shape checkbox"></i><label class="txt" for="Cbox5">*（アスタリスク）</label>
+            <input type="checkbox" id="Cbox7" name="str_style[]" value="7" checked="checked">
+            <i class="shape checkbox"></i><label class="txt" for="Cbox7">+（プラス）</label>
+            <input type="checkbox" id="Cbox6" name="str_style[]" value="6" checked="checked">
+            <i class="shape checkbox"></i><label class="txt" for="Cbox6">-（ハイフン）</label>
+            <input type="checkbox" id="Cbox8" name="str_style[]" value="8" checked="checked">
+            <i class="shape checkbox"></i><label class="txt" for="Cbox8">.（ドット）</label>
+          </div>
+          <div class="check_wrap size_s">
+            <input type="checkbox" id="Cbox4" name="str_style[]" value="4" checked="checked">
+            <i class="shape checkbox"></i><label class="txt" for="Cbox4">/（スラッシュ）</label>
+            <input type="checkbox" id="Cbox9" name="str_style[]" value="9" checked="checked">
+            <i class="shape checkbox"></i><label class="txt" for="Cbox9">:（コロン）</label><!--,カンマ-->
+            <input type="checkbox" id="Cbox14" name="str_style[]" value="14" checked="checked">
+            <i class="shape checkbox"></i><label class="txt" for="Cbox14">;（セミコロン）</label><!--アンド-->
+            <input type="checkbox" id="Cbox18" name="str_style[]" value="18" checked="checked">
+            <i class="shape checkbox"></i><label class="txt" for="Cbox18">?（クエスチョン）</label><!--パイプ-->
+            <input type="checkbox" id="Cbox20" name="str_style[]" value="20" checked="checked">
+            <i class="shape checkbox"></i><label class="txt" for="Cbox20">@（アットマーク）</label><!--新規-->
+          </div>
+          <div class="check_wrap size_s">
+            <input type="checkbox" id="Cbox21" name="str_style[]" value="21" checked="checked">
+            <i class="shape checkbox"></i><label class="txt" for="Cbox21">[（左角かっこ）</label><!--新規-->
+            <input type="checkbox" id="Cbox22" name="str_style[]" value="22" checked="checked">
+            <i class="shape checkbox"></i><label class="txt" for="Cbox22">]（右角かっこ）</label><!--新規-->
+            <input type="checkbox" id="Cbox23" name="str_style[]" value="23" checked="checked">
+            <i class="shape checkbox"></i><label class="txt" for="Cbox23">^（ハット）</label><!--新規-->
+            <input type="checkbox" id="Cbox19" name="str_style[]" value="19" checked="checked">
+            <i class="shape checkbox"></i><label class="txt" for="Cbox19">_（アンダーバー）</label><!--新規-->
+            <input type="checkbox" id="Cbox24" name="str_style[]" value="24" checked="checked">
+            <i class="shape checkbox"></i><label class="txt" for="Cbox24">{（左波かっこ）</label><!--新規-->
+          </div>
+          <div class="check_wrap size_s">
+            <input type="checkbox" id="Cbox25" name="str_style[]" value="25" checked="checked">
+            <i class="shape checkbox"></i><label class="txt" for="Cbox25">}（右波かっこ）</label><!--新規-->
+            <input type="checkbox" id="Cbox17" name="str_style[]" value="17" checked="checked">
+            <i class="shape checkbox"></i><label class="txt" for="Cbox17">~（チルダ）</label>
+          </div>
+        </div>
+      </dd>
+    </dl>
+    <dl>
+      <dt>文字数　10文字以上20文字以下（12文字以上を推奨）。</dt>
+      <dd>
+        <div class="check_wrap plus_form">
+          <input type="radio" id="Digit0" name="digit" value="0" checked="checked">
+          <i class="shape radio"></i><input type="number" name="digit_s" value="20" onfocus="d_focus()" class="form_txt"
+            min="10" max="20" id="d0num"><label class="txt" for="Digit0">文字</label>
+        </div>
+        <div class="check_wrap">
+          <input type="radio" id="Digit1" name="digit" value="12">
+          <i class="shape radio"></i><label class="txt" for="Digit1">12文字</label>
+          <input type="radio" id="Digit2" name="digit" value="20">
+          <i class="shape radio"></i><label class="txt" for="Digit2">20文字</label>
+        </div>
+      </dd>
+    </dl>
+    <!--
+    <dl>
+      <dt>個数</dt>
+      <dd>
+        <div class="check_wrap">
+          <input type="radio" id="Su2" name="su" value="10" checked="checked">
+          <i class="shape radio"></i><label class="txt" for="Su2">10個</label>
+        </div>
+
+      </dd>
+    </dl>-->
+    <dl>
+      <dt>その他</dt>
+      <dd>
+        <div class="check_wrap row">
+          <input type="checkbox" id="Condition0" name="condition[]" value="0" checked="checked">
+          <i class="shape checkbox"></i><label class="txt" for="Condition0">似通った英数字は省く</label>
+        </div>
+      </dd>
+    </dl>
+    <!-- /.randam_selects -->
+  </div>
+
+</body>
+
+</html>

@@ -1,0 +1,7 @@
+#pulldown.open {
+    display: block;
+    display: none;
+}
+th{
+    user-select: all;
+}
