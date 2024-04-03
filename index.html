@@ -13,6 +13,11 @@
 		<![endif]-->
   <script type="text/javascript" src="jquery-3.7.1.min.js"></script>
   <script src="index.js"></script>
+  <script>
+    function copy_fn(j) {
+    navigator.clipboard.writeText($(".form_txt").eq(j).val());
+    }
+  </script>
 </head>
 
 <body>
