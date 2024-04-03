@@ -5,3 +5,12 @@
 th{
     user-select: all;
 }
+button{
+    cursor: pointer;
+    width: 80px;
+    height: 50px;
+}
+a {
+    color: blue;
+    font-size: large;
+}
