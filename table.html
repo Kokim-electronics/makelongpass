@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>CSV Table Viewer</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; font-size: 13px; background: #f4f6f9; color: #222;
+         display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+  header { background: #1e2a3a; color: #fff; padding: 12px 20px; display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
+  header h1 { font-size: 16px; font-weight: 600; }
+  #file-label { cursor: pointer; background: #3a7bd5; color: #fff; padding: 5px 12px; border-radius: 4px; font-size: 12px; }
+  #file-input { display: none; }
+  #status { font-size: 12px; opacity: 0.8; }
+  #controls { padding: 8px 20px; background: #fff; border-bottom: 1px solid #ddd;
+               display: flex; gap: 12px; align-items: center; flex-shrink: 0; }
+  #controls button { padding: 5px 12px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer; font-size: 12px; background: #fff; }
+  #controls button:hover { background: #f0f0f0; }
+  .si-hint { font-size: 11px; color: #999; }
+  #count { font-size: 12px; color: #555; margin-left: auto; }
+  #table-wrap { flex: 1; overflow: auto; padding: 0 20px 20px; }
+  table { border-collapse: collapse; white-space: nowrap; margin-top: 16px; background: #fff;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.1); table-layout: fixed; }
+  colgroup col:first-child { width: 60px; }
+  colgroup col { width: 130px; }
+  /* header row */
+  .head-th { background: #1e2a3a; color: #fff; padding: 6px 10px; text-align: left;
+             position: sticky; top: 0; z-index: 2; font-weight: 500;
+             height: 44px; overflow: hidden; cursor: pointer; user-select: none; }
+  .head-th:hover { background: #28394f; }
+  .head-th.sort-asc, .head-th.sort-desc { background: #a19f22; }
+  .head-th .col-name { display: block; }
+  .head-th .col-unit { display: block; font-size: 10px; opacity: 0.7; font-weight: 400; }
+  .sort-ind { float: right; font-size: 11px; margin-left: 4px; opacity: 0.3; }
+  .head-th.sort-asc  .sort-ind { opacity: 1; }
+  .head-th.sort-desc .sort-ind { opacity: 1; }
+  /* filter row */
+  .filt-th { background: #2c3e55; padding: 4px 5px;
+             position: sticky; top: 44px; z-index: 2; vertical-align: top; }
+  .filt-th.active { background: #1c971c; }
+  .filter-cell { display: flex; flex-direction: column; gap: 3px; }
+  .filter-cell select { padding: 2px 3px; font-size: 11px; border: 1px solid #555; border-radius: 3px;
+                        background: #1e2a3a; color: #fff; width: 100%; }
+  .filter-cell input  { padding: 3px 5px; font-size: 11px; border: 1px solid #555; border-radius: 3px;
+                        background: #1e2a3a; color: #fff; width: 100%; }
+  .filter-cell input::placeholder { color: #aaa; }
+  .filter-cell input.invalid { border-color: #e74c3c; background: #3a1e1e; }
+  /* data cells */
+  td { padding: 0 10px; border-bottom: 1px solid #eee; color: #333; overflow: hidden; text-overflow: ellipsis; }
+  tr:hover td { background: #f0f4ff; }
+  td.num { text-align: right; font-family: monospace; }
+  td.point-col { font-weight: 600; color: #1e2a3a; text-align: center; }
+  /* loading overlay */
+  #overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 200;
+             align-items: center; justify-content: center; flex-direction: column; gap: 12px; color: #fff; font-size: 16px; }
+  #overlay.show { display: flex; }
+  .spinner { width: 36px; height: 36px; border: 4px solid #ffffff44; border-top-color: #fff;
+             border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div id="overlay"><div class="spinner"></div><span id="overlay-msg">読み込み中...</span></div>
+
+<header>
+  <h1>CSV Table Viewer</h1>
+  <label id="file-label" for="file-input">CSVを開く</label>
+  <input type="file" id="file-input" accept=".csv">
+  <span id="status">output.csv を探しています...</span>
+</header>
+<div id="controls">
+  <button id="clear-btn">フィルタをクリア</button>
+  <span class="si-hint">SI接頭辞: T G M k m u n p f</span>
+  <span id="count"></span>
+</div>
+<div id="table-wrap">
+  <table id="main-table">
+    <colgroup id="colgroup"></colgroup>
+    <thead id="thead"></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<script>
+// ── Constants ─────────────────────────────────────────────────────────────────
+const ROW_HEIGHT = 28;
+const BUFFER     = 50;
+
+// ── SI ────────────────────────────────────────────────────────────────────────
+const SI_MAP = { T:1e12, G:1e9, M:1e6, k:1e3, m:1e-3, u:1e-6, n:1e-9, p:1e-12, f:1e-15 };
+const SI_SCALE = [[1e12,'T'],[1e9,'G'],[1e6,'M'],[1e3,'k'],[1,''],[1e-3,'m'],[1e-6,'u'],[1e-9,'n'],[1e-12,'p'],[1e-15,'f']];
+
+function parseSI(str) {
+  if (!str) return null;
+  str = str.trim();
+  if (/^-?[\d.]+([eE][+-]?\d+)?$/.test(str)) return parseFloat(str);
+  const m = str.match(/^(-?[\d.]+(?:[eE][+-]?\d+)?)\s*([TGMkmunpf])$/);
+  if (m) return parseFloat(m[1]) * SI_MAP[m[2]];
+  return NaN;
+}
+
+function formatSI(val) {
+  if (!isFinite(val)) return String(val);
+  const abs = Math.abs(val);
+  for (const [s, p] of SI_SCALE) {
+    if (abs >= s * 0.9999 || s === 1e-15)
+      return parseFloat((val / s).toPrecision(15)).toString() + p;
+  }
+  return val.toString();
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let headers = [], rows = [], filters = [];
+let visibleIndices = [];
+let renderStart = -1, renderEnd = -1;
+let sortCol = -1, sortDir = 1;
+
+// ── CSV ────────────────────────────────────────────────────────────────────────
+function parseHeader(h) {
+  const m = h.trim().match(/^(.+?)\s*\((.+?)\)$/);
+  return m ? { name: m[1].trim(), unit: m[2].trim() } : { name: h.trim(), unit: '' };
+}
+
+function loadCSV(text, filename) {
+  const lines = text.trim().split(/\r?\n/);
+  headers = lines[0].split(',');
+  rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    if (lines[i].trim()) rows.push(lines[i].split(',').map(Number));
+  }
+  filters = headers.map(() => ({ op: '=', val: '' }));
+  //上のfiltersの中で初期設定
+  sortCol = -1; sortDir = 1;
+  document.getElementById('status').textContent = filename + '  (' + rows.length.toLocaleString() + ' rows)';
+  buildTable();
+  hideOverlay();
+}
+
+// ── Table build ────────────────────────────────────────────────────────────────
+function buildTable() {
+  // colgroup
+  const cg = document.getElementById('colgroup');
+  cg.innerHTML = '';
+  headers.forEach((_, i) => {
+    const col = document.createElement('col');
+    if (i === 0) col.style.width = '60px';
+    cg.appendChild(col);
+  });
+
+  const thead = document.getElementById('thead');
+  thead.innerHTML = '';
+  document.getElementById('tbody').innerHTML = '';
+  renderStart = -1; renderEnd = -1;
+
+  // Header row
+  const hr = document.createElement('tr');
+  headers.forEach((h, i) => {
+    const th = document.createElement('th');
+    th.className = 'head-th';
+    const info = parseHeader(h);
+    th.innerHTML = `<span class="sort-ind">▲</span><span class="col-name">${info.name}</span>${info.unit ? `<span class="col-unit">(${info.unit})</span>` : ''}`;
+    th.onclick = () => {
+      if (sortCol === i) { sortDir *= -1; }
+      else { sortCol = i; sortDir = 1; }
+      updateSortIndicators();
+      visibleIndices.sort((a, b) => (rows[a][i] - rows[b][i]) * sortDir);
+      renderStart = -1; renderEnd = -1;
+      document.getElementById('table-wrap').scrollTop = 0;
+      renderViewport(0);
+    };
+    hr.appendChild(th);
+  });
+  thead.appendChild(hr);
+
+  // Filter row
+  const fr = document.createElement('tr');
+  headers.forEach((h, i) => {
+    const th = document.createElement('th');
+    th.className = 'filt-th';
+    if (i === 0) {
+      th.innerHTML = '<span style="font-size:10px;color:#aaa;padding:2px 4px">—</span>';
+    } else {
+      const cell = document.createElement('div');
+      cell.className = 'filter-cell';
+      const sel = document.createElement('select');
+      ['>=','<=','>','<','=','!='].forEach(op => {
+        const o = document.createElement('option');
+        o.value = op; o.textContent = op;
+        if (op === filters[i].op) o.selected = true;
+        sel.appendChild(o);
+      });
+      const inp = document.createElement('input');
+      inp.type = 'text';
+      inp.placeholder = '例: 1u';
+      inp.value = filters[i].val;
+      sel.onchange = e => { filters[i].op = e.target.value; applyFilters(); };
+      inp.oninput = e => {
+        const v = e.target.value;
+        filters[i].val = v;
+        inp.classList.toggle('invalid', v !== '' && isNaN(parseSI(v)));
+        th.classList.toggle('active', v !== '');
+        applyFilters();
+      };
+      cell.appendChild(sel);
+      cell.appendChild(inp);
+      th.appendChild(cell);
+    }
+    fr.appendChild(th);
+  });
+  thead.appendChild(fr);
+
+  applyFilters();
+}
+
+// ── Filter + virtual scroll ────────────────────────────────────────────────────
+function applyFilters() {
+  visibleIndices = [];
+  for (let ri = 0; ri < rows.length; ri++) {
+    let pass = true;
+    const row = rows[ri];
+    for (let ci = 1; ci < headers.length; ci++) {
+      const f = filters[ci];
+      if (!f.val) continue;
+      const t = parseSI(f.val);
+      if (isNaN(t)) continue;
+      const v = row[ci];
+      const eq = Math.abs(v - t) / (Math.abs(t) || 1) < 1e-9;
+      if (f.op === '>=' && !(v >= t))  { pass = false; break; }
+      if (f.op === '<=' && !(v <= t))  { pass = false; break; }
+      if (f.op === '>'  && !(v >  t))  { pass = false; break; }
+      if (f.op === '<'  && !(v <  t))  { pass = false; break; }
+      if (f.op === '='  && !eq)        { pass = false; break; }
+      if (f.op === '!=' && eq)         { pass = false; break; }
+    }
+    if (pass) visibleIndices.push(ri);
+  }
+  if (sortCol >= 0) {
+    visibleIndices.sort((a, b) => (rows[a][sortCol] - rows[b][sortCol]) * sortDir);
+  }
+  document.getElementById('count').textContent =
+    visibleIndices.length.toLocaleString() + ' / ' + rows.length.toLocaleString() + ' 行表示中';
+  const wrap = document.getElementById('table-wrap');
+  wrap.scrollTop = 0;
+  renderStart = -1; renderEnd = -1;
+  renderViewport(0);
+}
+
+function updateSortIndicators() {
+  document.querySelectorAll('.head-th').forEach((th, i) => {
+    th.classList.remove('sort-asc', 'sort-desc');
+    const ind = th.querySelector('.sort-ind');
+    if (i === sortCol) {
+      th.classList.add(sortDir === 1 ? 'sort-asc' : 'sort-desc');
+      ind.textContent = sortDir === 1 ? '▲' : '▼';
+    } else {
+      ind.textContent = '▲';
+    }
+  });
+}
+
+function renderViewport(scrollTop) {
+  const wrap  = document.getElementById('table-wrap');
+  const total = visibleIndices.length;
+  const start = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - BUFFER);
+  const end   = Math.min(total, Math.ceil((scrollTop + wrap.clientHeight) / ROW_HEIGHT) + BUFFER);
+
+  if (start === renderStart && end === renderEnd) return;
+  renderStart = start; renderEnd = end;
+
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+
+  if (start > 0) {
+    const sp = tbody.insertRow();
+    const td = sp.insertCell();
+    td.colSpan = headers.length;
+    td.style.cssText = `height:${start * ROW_HEIGHT}px;padding:0;border:none;`;
+  }
+
+  for (let i = start; i < end; i++) {
+    const row = rows[visibleIndices[i]];
+    const tr = tbody.insertRow();
+    tr.style.height = ROW_HEIGHT + 'px';
+    row.forEach((val, ci) => {
+      const td = tr.insertCell();
+      if (ci === 0) { td.className = 'point-col'; td.textContent = val; }
+      else          { td.className = 'num';        td.textContent = formatSI(val); }
+    });
+  }
+
+  if (end < total) {
+    const sp = tbody.insertRow();
+    const td = sp.insertCell();
+    td.colSpan = headers.length;
+    td.style.cssText = `height:${(total - end) * ROW_HEIGHT}px;padding:0;border:none;`;
+  }
+}
+
+document.getElementById('table-wrap').addEventListener('scroll', e => {
+  renderViewport(e.currentTarget.scrollTop);
+}, { passive: true });
+
+// ── Overlay ───────────────────────────────────────────────────────────────────
+function showOverlay(msg) {
+  document.getElementById('overlay-msg').textContent = msg || '読み込み中...';
+  document.getElementById('overlay').classList.add('show');
+}
+function hideOverlay() { document.getElementById('overlay').classList.remove('show'); }
+
+// ── File picker fallback ───────────────────────────────────────────────────────
+document.getElementById('file-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  showOverlay(file.name + ' を読み込み中...');
+  setTimeout(() => {           // let overlay render before heavy work
+    const reader = new FileReader();
+    reader.onload = ev => loadCSV(ev.target.result, file.name);
+    reader.readAsText(file, 'UTF-8');
+  }, 30);
+});
+
+document.getElementById('clear-btn').addEventListener('click', () => {
+  filters = headers.map((_, i) => ({ op: filters[i]?.op || '>=', val: '' }));
+  document.querySelectorAll('.filter-cell input').forEach(inp => {
+    inp.value = ''; inp.classList.remove('invalid');
+  });
+  document.querySelectorAll('.filt-th').forEach(th => th.classList.remove('active'));
+  applyFilters();
+});
+
+// ── Auto-load output.csv via fetch ────────────────────────────────────────────
+(async () => {
+  showOverlay('output.csv を読み込み中...');
+  try {
+    const res = await fetch('./output.csv');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    loadCSV(text, 'output.csv');
+  } catch {
+    hideOverlay();
+    document.getElementById('status').textContent =
+      'output.csv が見つかりません — 「CSVを開く」で選択してください';
+  }
+})();
+</script>
+</body>
+</html>

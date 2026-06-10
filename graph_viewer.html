@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>CSV グラフビューア</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: sans-serif; background: #f0f2f5; color: #333; }
+    header { background: #1a73e8; color: white; padding: 14px 24px; font-size: 1.2rem; font-weight: bold; }
+    .container { display: flex; gap: 16px; padding: 16px; height: calc(100vh - 52px); }
+    .sidebar {
+      width: 290px; flex-shrink: 0; background: white; border-radius: 8px;
+      padding: 16px; overflow-y: auto; box-shadow: 0 1px 4px rgba(0,0,0,.15);
+    }
+    .sidebar h2 { font-size: .9rem; text-transform: uppercase; letter-spacing: .05em; color: #888; margin-bottom: 8px; }
+    .file-area {
+      border: 2px dashed #ccc; border-radius: 6px; padding: 16px; text-align: center;
+      cursor: pointer; transition: border-color .2s;
+    }
+    .file-area:hover, .file-area.drag { border-color: #1a73e8; background: #e8f0fe; }
+    .file-area input { display: none; }
+    .file-area p { font-size: .82rem; color: #666; margin-top: 6px; }
+    #progressWrap { margin-top: 10px; display: none; }
+    #progressTrack { background: #e0e0e0; border-radius: 4px; height: 7px; overflow: hidden; }
+    #progressFill { height: 100%; background: #1a73e8; width: 0%; transition: width .15s; }
+    #progressText { font-size: .75rem; color: #555; margin-bottom: 3px; }
+    .section { margin-top: 14px; }
+    label { display: block; font-size: .82rem; font-weight: 600; margin-bottom: 4px; color: #555; }
+    select {
+      width: 100%; padding: 7px 10px; border: 1px solid #ccc; border-radius: 5px;
+      font-size: .85rem; background: white;
+    }
+    select:focus { outline: none; border-color: #1a73e8; }
+    input[type=number], input[type=text] {
+      width: 100%; padding: 6px 10px; border: 1px solid #ccc; border-radius: 5px; font-size: .85rem;
+    }
+    button#plotBtn {
+      width: 100%; margin-top: 16px; padding: 10px; background: #1a73e8; color: white;
+      border: none; border-radius: 6px; font-size: .9rem; cursor: pointer; font-weight: bold;
+    }
+    button#plotBtn:hover { background: #1558b0; }
+    button#plotBtn:disabled { background: #aaa; cursor: not-allowed; }
+    .chart-area {
+      flex: 1; background: white; border-radius: 8px;
+      padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.15);
+      display: flex; flex-direction: column;
+    }
+    .chart-area h3 { font-size: .9rem; color: #555; margin-bottom: 12px; }
+    .chart-wrap { flex: 1; position: relative; min-height: 0; }
+    canvas { max-height: 100%; }
+    .status { font-size: .8rem; color: #888; margin-top: 10px; }
+    .log { font-size: .75rem; color: #c00; margin-top: 4px; }
+    .chart-type-row { display: flex; gap: 6px; margin-top: 8px; }
+    .chart-type-btn {
+      flex: 1; padding: 5px 2px; border: 1px solid #ccc; border-radius: 5px;
+      font-size: .75rem; cursor: pointer; background: white;
+    }
+    .chart-type-btn.active { background: #1a73e8; color: white; border-color: #1a73e8; }
+    /* チェックボックスフィルタ */
+    .filter-panel { border: 1px solid #e0e0e0; border-radius: 5px; margin-top: 8px; overflow: hidden; }
+    .filter-header {
+      display: flex; justify-content: space-between; align-items: center;
+      background: #f5f5f5; padding: 5px 8px; font-size: .8rem; font-weight: 600; color: #444;
+    }
+    .filter-btns { display: flex; gap: 3px; flex-shrink: 0; }
+    .filter-all-btn {
+      padding: 2px 5px; font-size: .7rem; border: 1px solid #ccc; border-radius: 3px;
+      cursor: pointer; background: white; white-space: nowrap;
+    }
+    .filter-all-btn:hover { background: #e8f0fe; }
+    .filter-remove-btn { color: #c00; font-weight: bold; }
+    .filter-remove-btn:hover { background: #fde8e8; }
+    .filter-checks { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 8px; max-height: 120px; overflow-y: auto; }
+    .check-label {
+      display: flex; align-items: center; gap: 3px; font-size: .78rem;
+      background: #f0f4ff; border: 1px solid #c5d3f0; border-radius: 3px;
+      padding: 2px 6px; cursor: pointer; user-select: none;
+    }
+    .check-label input { cursor: pointer; margin: 0; }
+    .check-label:has(input:not(:checked)) { background: #f5f5f5; border-color: #ddd; color: #aaa; }
+    /* 範囲フィルタ */
+    .range-body { padding: 6px 8px; display: flex; flex-direction: column; gap: 5px; }
+    .range-row { display: flex; align-items: center; gap: 5px; }
+    .range-op {
+      width: 54px; padding: 4px 4px; font-size: .82rem; flex-shrink: 0;
+      border: 1px solid #ccc; border-radius: 4px;
+    }
+    .range-val { flex: 1; padding: 4px 6px; font-size: .82rem; }
+    .range-hint { font-size: .7rem; color: #aaa; padding: 0 8px 6px; }
+    /* 範囲フィルタ追加UI */
+    .add-range-row { display: flex; gap: 5px; margin-top: 8px; }
+    .add-range-row select { flex: 1; padding: 5px 8px; font-size: .8rem; }
+    .add-range-row button {
+      padding: 5px 10px; font-size: .8rem; border: 1px solid #1a73e8; border-radius: 4px;
+      background: white; color: #1a73e8; cursor: pointer; white-space: nowrap;
+    }
+    .add-range-row button:hover { background: #e8f0fe; }
+    /* ── タブ ──────────────────────────────────────────────────────────────── */
+    .chart-area-top { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #e0e0e0; margin-bottom: 12px; }
+    .chart-area h3 { font-size: .9rem; color: #555; margin-bottom: 8px; }
+    .tab-bar { display: flex; gap: 0; margin-bottom: -2px; }
+    .tab-btn { padding: 7px 20px; border: none; background: none; cursor: pointer; font-size: .85rem; font-weight: 600; color: #888; border-bottom: 3px solid transparent; transition: color .15s; }
+    .tab-btn.active { color: #1a73e8; border-bottom-color: #1a73e8; }
+    .tab-btn:hover:not(.active) { color: #555; background: #f5f5f5; }
+    .tab-pane { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+    .table-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+    .csv-btn { padding: 6px 14px; background: #1a73e8; color: white; border: none; border-radius: 5px; font-size: .82rem; cursor: pointer; font-weight: 600; }
+    .csv-btn:hover { background: #1558b0; }
+    .csv-btn:disabled { background: #aaa; cursor: not-allowed; }
+    .table-wrap { flex: 1; overflow: auto; border: 1px solid #e0e0e0; border-radius: 5px; }
+    .data-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+    .data-table th { position: sticky; top: 0; background: #f0f4ff; padding: 7px 12px; text-align: right; border-bottom: 2px solid #c5d3f0; font-weight: 600; color: #444; white-space: nowrap; z-index: 1; }
+    .data-table th:first-child { text-align: left; }
+    .data-table td { padding: 4px 12px; text-align: right; border-bottom: 1px solid #f0f0f0; font-family: monospace; font-size: .8rem; white-space: nowrap; }
+    .data-table td:first-child { text-align: left; font-family: sans-serif; }
+    .data-table tr:nth-child(even) td { background: #fafafa; }
+    .data-table tr:hover td { background: #e8f0fe !important; }
+  </style>
+</head>
+<body>
+<header>CSV グラフビューア</header>
+<div class="container">
+  <div class="sidebar">
+    <h2>データ</h2>
+    <div class="file-area" id="dropZone">
+      <input type="file" id="csvFile" accept=".csv">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.5">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+      </svg>
+      <p>クリックまたはドラッグ&amp;ドロップ</p>
+    </div>
+    <div id="progressWrap">
+      <div id="progressText">読み込み中...</div>
+      <div id="progressTrack"><div id="progressFill"></div></div>
+    </div>
+    <div id="fileName" class="status"></div>
+
+    <div class="section" id="axisSection" style="display:none">
+      <h2 style="margin-top:4px">グラフ種類</h2>
+      <div class="chart-type-row">
+        <button class="chart-type-btn active" data-type="scatter">散布図</button>
+        <button class="chart-type-btn" data-type="line">折れ線</button>
+        <button class="chart-type-btn" data-type="smooth">平滑線</button>
+        <button class="chart-type-btn" data-type="bar">棒グラフ</button>
+      </div>
+      <div class="section">
+        <label for="xAxis">X 軸（横軸）</label>
+        <select id="xAxis"></select>
+      </div>
+      <div class="section">
+        <label for="yAxis">Y 軸（縦軸）</label>
+        <select id="yAxis" size="5" multiple style="height:120px"></select>
+        <p style="font-size:.72rem;color:#888;margin-top:3px">Ctrl/Cmd+クリックで複数選択</p>
+      </div>
+      <div class="section">
+        <label>グループ列（色分け・任意）</label>
+        <select id="groupAxis"><option value="">なし</option></select>
+      </div>
+      <div class="section">
+        <label>X軸スケール</label>
+        <select id="xScale">
+          <option value="linear">線形</option>
+          <option value="logarithmic">対数</option>
+        </select>
+      </div>
+      <div class="section">
+        <label>Y軸スケール</label>
+        <select id="yScale">
+          <option value="linear">線形</option>
+          <option value="logarithmic">対数</option>
+        </select>
+      </div>
+      <div class="section">
+        <label>最大プロット点数 / データセット</label>
+        <input type="number" id="maxPts" value="5000" min="100" max="100000" step="500">
+        <p style="font-size:.72rem;color:#888;margin-top:3px">超える場合は等間隔で間引き</p>
+      </div>
+
+      <!-- チェックボックスフィルタ -->
+      <div class="section" id="cbFilterSection" style="display:none">
+        <h2 style="margin-top:4px">チェックフィルタ</h2>
+        <div id="cbFilterPanels"></div>
+      </div>
+
+      <!-- 範囲フィルタ -->
+      <div class="section" id="rangeFilterSection" style="display:none">
+        <h2 style="margin-top:4px">範囲フィルタ</h2>
+        <div id="rangeFilterPanels"></div>
+        <div class="add-range-row">
+          <select id="rangeColSelect"></select>
+          <button id="addRangeBtn">＋追加</button>
+        </div>
+      </div>
+
+      <button id="plotBtn" disabled>グラフ表示</button>
+      <div id="logMsg" class="log"></div>
+    </div>
+  </div>
+
+  <div class="chart-area">
+    <div class="chart-area-top">
+      <h3 id="chartTitle">CSVを読み込んでください</h3>
+      <div class="tab-bar">
+        <button class="tab-btn active" data-tab="graph">グラフ</button>
+        <button class="tab-btn" data-tab="table">表</button>
+      </div>
+    </div>
+    <div id="tabGraph" class="tab-pane">
+      <div class="chart-wrap"><canvas id="myChart"></canvas></div>
+      <div id="dataStatus" class="status"></div>
+    </div>
+    <div id="tabTable" class="tab-pane" style="display:none">
+      <div class="table-toolbar">
+        <button id="csvExportBtn" class="csv-btn" disabled>CSV ダウンロード</button>
+        <span id="tableStatus" class="status"></span>
+      </div>
+      <div id="tableWrap" class="table-wrap">
+        <p style="padding:20px;color:#999;text-align:center;">グラフを表示すると表が出ます</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── SI接頭辞 ────────────────────────────────────────────────────────────────
+const SI_FMT = [
+  [1e15,'P'],[1e12,'T'],[1e9,'G'],[1e6,'M'],[1e3,'k'],
+  [1,''],[1e-3,'m'],[1e-6,'u'],[1e-9,'n'],[1e-12,'p'],[1e-15,'f']
+];
+const SI_PARSE = {f:1e-15,p:1e-12,n:1e-9,u:1e-6,'µ':1e-6,m:1e-3,k:1e3,K:1e3,M:1e6,G:1e9,T:1e12};
+
+function fmtNum(v) {
+  if (v == null || !isFinite(v)) return '';
+  if (v === 0) return '0';
+  const a = Math.abs(v);
+  for (const [scale, pfx] of SI_FMT) {
+    if (a >= scale * 0.99999) {
+      const val = v / scale;
+      return parseFloat(val.toPrecision(4)) + pfx;
+    }
+  }
+  return v.toExponential(3);
+}
+
+function parseSI(s) {
+  s = (s || '').trim();
+  if (!s) return NaN;
+  const last = s[s.length - 1];
+  if (SI_PARSE[last] !== undefined) return parseFloat(s.slice(0, -1)) * SI_PARSE[last];
+  return parseFloat(s);
+}
+
+// ─── Worker ──────────────────────────────────────────────────────────────────
+// Phase1: ヘッダー即送信
+// Phase2: 全数値列をFloat64Arrayとして保存＋フィルタ候補検出
+// Phase3: 保存済み配列でフィルタ＋プロット（テキスト再スキャン不要）
+const WORKER_CODE = `
+let headers = [];
+let colIdx = {};
+let numColArrays = {};  // { col: Float64Array } — 全数値列
+let rowCount = 0;
+
+onmessage = function(e) {
+  const msg = e.data;
+
+  // ─── Phase 1+2: init ─────────────────────────────────────────────────────
+  if (msg.type === 'init') {
+    const text = new TextDecoder('utf-8').decode(msg.buffer);
+
+    const firstNL = text.indexOf('\\n');
+    if (firstNL < 0) { postMessage({type:'error',msg:'ヘッダーが見つかりません'}); return; }
+
+    headers = text.slice(0, firstNL).replace(/\\r$/, '').split(',').map(h => h.trim());
+    headers.forEach((h, i) => colIdx[h] = i);
+
+    // Phase1完了: ヘッダーを即送信
+    postMessage({type:'headers', headers});
+
+    // ─ 先頭300行でサンプリング → 数値列を判定 ─
+    const sample = [];
+    let sPos = firstNL + 1;
+    while (sPos < text.length && sample.length < 300) {
+      const nl = text.indexOf('\\n', sPos);
+      const end = nl < 0 ? text.length : nl;
+      const line = text.slice(sPos, end).replace(/\\r$/, '');
+      if (line.trim()) sample.push(line.split(','));
+      if (nl < 0) break;
+      sPos = nl + 1;
+    }
+    const isNum = headers.map((_, j) =>
+      sample.length > 0 && sample.every(r => { const v=(r[j]||'').trim(); return v===''||!isNaN(Number(v)); })
+    );
+
+    // ─ 行数カウント ─
+    let rc = 0;
+    for (let i = firstNL + 1; i < text.length; i++) if (text.charCodeAt(i) === 10) rc++;
+    if (text.charCodeAt(text.length-1) !== 10) rc++;
+    rowCount = rc;
+
+    // ─ 全数値列の Float64Array を確保 ─
+    const numCols = headers.filter((_, j) => isNum[j]);
+    numCols.forEach(h => { numColArrays[h] = new Float64Array(rowCount); });
+
+    // ─ フィルタ候補検出用のユニーク値セット ─
+    const MAX_UNIQUE = 300;
+    const uniques = {};
+    const overflow = {};
+    numCols.forEach(h => { uniques[h] = new Set(); overflow[h] = false; });
+
+    // ─ フルスキャン: 配列埋め + ユニーク値収集 ─
+    let row = 0, pos = firstNL + 1;
+    while (pos < text.length) {
+      const nl = text.indexOf('\\n', pos);
+      const end = nl < 0 ? text.length : nl;
+      const line = text.slice(pos, end).replace(/\\r$/, '');
+      if (line.trim()) {
+        const vals = line.split(',');
+        numCols.forEach(h => {
+          const v = (vals[colIdx[h]] || '').trim();
+          const num = v === '' ? NaN : Number(v);
+          numColArrays[h][row] = num;
+          if (!overflow[h] && isFinite(num)) {
+            uniques[h].add(num);
+            if (uniques[h].size > MAX_UNIQUE) overflow[h] = true;
+          }
+        });
+        row++;
+      }
+      if (nl < 0) break;
+      pos = nl + 1;
+      if (row % 50000 === 0)
+        postMessage({type:'progress', pct: Math.min(95, Math.round(row/rowCount*100))});
+    }
+    rowCount = row;
+
+    // ─ フィルタ候補を分類 ─
+    const cbCandidates = [];   // チェックボックス (≤100 unique)
+    const rangeCandidates = []; // 範囲フィルタ (>100 unique or overflowed)
+    numCols.forEach(h => {
+      if (!overflow[h] && uniques[h].size >= 2) {
+        cbCandidates.push({col: h, uniques: [...uniques[h]].sort((a,b)=>a-b)});
+      } else {
+        rangeCandidates.push(h);
+      }
+    });
+
+    postMessage({type:'ready', rowCount, cbCandidates, rangeCandidates});
+  }
+
+  // ─── Phase 3: plot ────────────────────────────────────────────────────────
+  else if (msg.type === 'plot') {
+    const {xKey, yKeys, groupKey, cbFilters, rangeFilters, maxPts, sortByX} = msg;
+
+    const xArr = numColArrays[xKey];
+    if (!xArr) { postMessage({type:'plotData', datasets:[], filteredRows:0}); return; }
+
+    // ─ フィルタ適用: インデックス収集 ─
+    const indices = [];
+    for (let i = 0; i < rowCount; i++) {
+      let pass = true;
+
+      // チェックボックスフィルタ
+      for (const f of cbFilters) {
+        const arr = numColArrays[f.col];
+        if (arr && !f.allowed.has(arr[i])) { pass = false; break; }
+      }
+      if (!pass) continue;
+
+      // 範囲フィルタ
+      for (const f of rangeFilters) {
+        const arr = numColArrays[f.col];
+        if (!arr) continue;
+        const v = arr[i];
+        for (const c of f.conditions) {
+          let ok = true;
+          if (c.op === 'gte') ok = v >= c.val;
+          else if (c.op === 'gt')  ok = v >  c.val;
+          else if (c.op === 'lte') ok = v <= c.val;
+          else if (c.op === 'lt')  ok = v <  c.val;
+          if (!ok) { pass = false; break; }
+        }
+        if (!pass) break;
+      }
+      if (pass) indices.push(i);
+    }
+
+    if (indices.length === 0) {
+      postMessage({type:'plotData', datasets:[], filteredRows:0});
+      return;
+    }
+
+    // ─ グループ分け ─
+    const gArr = groupKey ? numColArrays[groupKey] : null;
+    const groups = new Map();
+
+    if (gArr) {
+      for (const i of indices) {
+        const g = String(gArr[i]);
+        if (!groups.has(g)) groups.set(g, []);
+        groups.get(g).push(i);
+      }
+    } else {
+      groups.set('__all__', indices);
+    }
+
+    // ─ データセット構築 ─
+    const datasets = [];
+    const transfers = [];
+
+    function buildDataset(label, idxList) {
+      const src = sortByX ? idxList.slice().sort((a,b) => xArr[a] - xArr[b]) : idxList;
+      const n = src.length;
+      const step = n > maxPts ? n / maxPts : 1;
+      const count = n > maxPts ? maxPts : n;
+
+      yKeys.forEach((yKey, k) => {
+        const yArr = numColArrays[yKey];
+        if (!yArr) return;
+        const xOut = new Float64Array(count);
+        const yOut = new Float64Array(count);
+        let valid = 0;
+        for (let i = 0; i < count; i++) {
+          const idx = src[Math.floor(i * step)];
+          const x = xArr[idx], y = yArr[idx];
+          if (isFinite(x) && isFinite(y)) { xOut[valid] = x; yOut[valid] = y; valid++; }
+        }
+        const lbl = gArr && yKeys.length > 1 ? yKey+' ['+label+']' : gArr ? label : yKey;
+        const xs = xOut.slice(0, valid), ys = yOut.slice(0, valid);
+        datasets.push({label: lbl, group: gArr ? label : null, yKey, x: xs, y: ys});
+        transfers.push(xs.buffer, ys.buffer);
+      });
+    }
+
+    [...groups.keys()].sort().forEach(g => buildDataset(g, groups.get(g)));
+    postMessage({type:'plotData', datasets, filteredRows: indices.length}, transfers);
+  }
+};
+`;
+
+const workerBlob = new Blob([WORKER_CODE], {type: 'application/javascript'});
+const workerUrl  = URL.createObjectURL(workerBlob);
+let worker       = null;
+
+// ─── 状態 ─────────────────────────────────────────────────────────────────
+let headers     = [];
+let rowCount    = 0;
+let chartInstance = null;
+let chartType   = 'scatter';
+let cbFilterCols   = [];  // チェックボックスフィルタの列名
+let rangeColList   = [];  // 範囲フィルタに追加できる列名
+let activeRangeCols = []; // 現在表示中の範囲フィルタ列名
+let currentFile = '';
+let workerReady = false;
+let lastDatasets = null;
+let lastXKey     = '';
+let lastYKeys    = [];
+let lastGroupKey = '';
+
+const COLORS = [
+  '#1a73e8','#e8710a','#188038','#d93025','#8430ce',
+  '#00897b','#e37400','#c5221f','#0d652d','#174ea6'
+];
+
+// ─── ファイル読み込み ─────────────────────────────────────────────────────
+const dropZone     = document.getElementById('dropZone');
+const csvFileInput = document.getElementById('csvFile');
+
+dropZone.addEventListener('click', () => csvFileInput.click());
+dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('drag'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag');
+  if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+});
+csvFileInput.addEventListener('change', () => { if (csvFileInput.files[0]) loadFile(csvFileInput.files[0]); });
+
+function loadFile(file) {
+  if (worker) { worker.terminate(); worker = null; }
+  workerReady = false;
+  currentFile = file.name;
+  document.getElementById('plotBtn').disabled = true;
+  document.getElementById('axisSection').style.display = 'none';
+  setProgress(0, 'ヘッダー読み込み中...');
+
+  worker = new Worker(workerUrl);
+  worker.onmessage = handleWorkerMsg;
+  worker.onerror   = err => { hideProgress(); document.getElementById('logMsg').textContent = 'エラー: ' + err.message; };
+
+  const reader = new FileReader();
+  reader.onload = e => worker.postMessage({type:'init', buffer: e.target.result}, [e.target.result]);
+  reader.readAsArrayBuffer(file);
+}
+
+function handleWorkerMsg(e) {
+  const msg = e.data;
+  if (msg.type === 'headers') {
+    headers = msg.headers;
+    populateSelects();
+    document.getElementById('axisSection').style.display = 'block';
+    setProgress(0, 'データスキャン中...');
+
+  } else if (msg.type === 'progress') {
+    setProgress(msg.pct, `スキャン中... ${msg.pct}%`);
+
+  } else if (msg.type === 'ready') {
+    rowCount = msg.rowCount;
+    hideProgress();
+    document.getElementById('fileName').textContent =
+      `${currentFile}  (${rowCount.toLocaleString()} 行, ${headers.length} 列)`;
+    buildCbFilterPanels(msg.cbCandidates);
+    buildRangeFilterUI(msg.rangeCandidates);
+    workerReady = true;
+    document.getElementById('plotBtn').disabled = false;
+    document.getElementById('logMsg').textContent = '';
+
+  } else if (msg.type === 'plotData') {
+    renderChart(msg.datasets, msg.filteredRows);
+
+  } else if (msg.type === 'error') {
+    hideProgress();
+    document.getElementById('logMsg').textContent = 'エラー: ' + msg.msg;
+  }
+}
+
+function setProgress(pct, text) {
+  document.getElementById('progressWrap').style.display = 'block';
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').textContent = text;
+}
+function hideProgress() { document.getElementById('progressWrap').style.display = 'none'; }
+
+// ─── セレクト生成 ─────────────────────────────────────────────────────────
+function populateSelects() {
+  const xSel = document.getElementById('xAxis');
+  const ySel = document.getElementById('yAxis');
+  const gSel = document.getElementById('groupAxis');
+  xSel.innerHTML = ''; ySel.innerHTML = '';
+  gSel.innerHTML = '<option value="">なし</option>';
+  headers.forEach(h => {
+    xSel.add(new Option(h, h));
+    ySel.add(new Option(h, h));
+    gSel.add(new Option(h, h));
+  });
+  if (headers.length > 0) xSel.value = headers[0];
+  if (headers.length > 1) ySel.options[1].selected = true;
+}
+
+document.querySelectorAll('.chart-type-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.chart-type-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    chartType = btn.dataset.type;
+  });
+});
+
+// ─── タブ切り替え ──────────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.dataset.tab;
+    document.getElementById('tabGraph').style.display = tab === 'graph' ? 'flex' : 'none';
+    document.getElementById('tabTable').style.display = tab === 'table' ? 'flex' : 'none';
+    if (tab === 'table') renderTable();
+  });
+});
+
+// ─── チェックボックスフィルタ ─────────────────────────────────────────────
+function buildCbFilterPanels(candidates) {
+  const container = document.getElementById('cbFilterPanels');
+  container.innerHTML = '';
+  cbFilterCols = [];
+
+  candidates.forEach(({col, uniques}) => {
+    cbFilterCols.push(col);
+    const panel = document.createElement('div');
+    panel.className = 'filter-panel';
+    panel.dataset.col = col;
+    panel.innerHTML = `
+      <div class="filter-header">
+        <span>${col}</span>
+        <div class="filter-btns">
+          <button class="filter-all-btn" data-action="all">全選択</button>
+          <button class="filter-all-btn" data-action="none">全解除</button>
+          <button class="filter-all-btn filter-remove-btn" data-action="remove">×</button>
+        </div>
+      </div>
+      <div class="filter-checks">
+        ${uniques.map(v => `
+          <label class="check-label">
+            <input type="checkbox" class="filter-cb" data-col="${col}" value="${v}" checked>
+            ${fmtNum(v)}
+          </label>`).join('')}
+      </div>`;
+    container.appendChild(panel);
+  });
+
+  const sec = document.getElementById('cbFilterSection');
+  sec.style.display = cbFilterCols.length > 0 ? 'block' : 'none';
+
+  container.addEventListener('click', e => {
+    const btn = e.target.closest('.filter-all-btn');
+    if (!btn) return;
+    const panel = btn.closest('.filter-panel');
+    const col   = panel.dataset.col;
+    if (btn.dataset.action === 'remove') {
+      panel.remove();
+      cbFilterCols = cbFilterCols.filter(c => c !== col);
+      if (container.children.length === 0) sec.style.display = 'none';
+      return;
+    }
+    panel.querySelectorAll('.filter-cb').forEach(cb => cb.checked = btn.dataset.action === 'all');
+  });
+}
+
+// ─── 範囲フィルタUI ───────────────────────────────────────────────────────
+function buildRangeFilterUI(rangeCols) {
+  rangeColList   = rangeCols;
+  activeRangeCols = [];
+  const container = document.getElementById('rangeFilterPanels');
+  container.innerHTML = '';
+
+  const sel = document.getElementById('rangeColSelect');
+  sel.innerHTML = '';
+  rangeCols.forEach(col => sel.add(new Option(col, col)));
+
+  const sec = document.getElementById('rangeFilterSection');
+  sec.style.display = rangeCols.length > 0 ? 'block' : 'none';
+}
+
+document.getElementById('addRangeBtn').addEventListener('click', () => {
+  const col = document.getElementById('rangeColSelect').value;
+  if (!col || activeRangeCols.includes(col)) return;
+  activeRangeCols.push(col);
+  addRangePanel(col);
+});
+
+function addRangePanel(col) {
+  const container = document.getElementById('rangeFilterPanels');
+  const panel = document.createElement('div');
+  panel.className = 'filter-panel';
+  panel.dataset.col = col;
+  panel.dataset.type = 'range';
+  panel.innerHTML = `
+    <div class="filter-header">
+      <span>${col}</span>
+      <div class="filter-btns">
+        <button class="filter-all-btn filter-remove-btn" data-action="remove">×</button>
+      </div>
+    </div>
+    <div class="range-body">
+      <div class="range-row">
+        <select class="range-op" data-which="1">
+          <option value="none">—</option>
+          <option value="gte">≥</option>
+          <option value="gt">&gt;</option>
+          <option value="lte">≤</option>
+          <option value="lt">&lt;</option>
+        </select>
+        <input class="range-val" data-which="1" type="text" placeholder="例: -50u">
+      </div>
+      <div class="range-row">
+        <select class="range-op" data-which="2">
+          <option value="none">—</option>
+          <option value="lte" selected>≤</option>
+          <option value="lt">&lt;</option>
+          <option value="gte">≥</option>
+          <option value="gt">&gt;</option>
+        </select>
+        <input class="range-val" data-which="2" type="text" placeholder="例: -1u">
+      </div>
+    </div>
+    <div class="range-hint">SI接頭辞: f p n u m k M G T（例: -50u = -50×10⁻⁶）</div>`;
+
+  panel.querySelector('.filter-remove-btn').addEventListener('click', () => {
+    panel.remove();
+    activeRangeCols = activeRangeCols.filter(c => c !== col);
+  });
+  container.appendChild(panel);
+}
+
+// ─── プロット ────────────────────────────────────────────────────────────
+document.getElementById('plotBtn').addEventListener('click', () => {
+  if (!workerReady) return;
+  const xKey     = document.getElementById('xAxis').value;
+  const yKeys    = Array.from(document.getElementById('yAxis').selectedOptions).map(o => o.value);
+  const groupKey = document.getElementById('groupAxis').value || '';
+  const maxPts   = parseInt(document.getElementById('maxPts').value) || 5000;
+  const log      = document.getElementById('logMsg');
+  log.textContent = '';
+
+  if (!xKey || yKeys.length === 0) { log.textContent = 'X軸とY軸を選択してください'; return; }
+
+  // チェックボックスフィルタ収集
+  const cbFilters = cbFilterCols
+    .filter(col => document.querySelector(`#cbFilterPanels .filter-panel[data-col="${col}"]`))
+    .map(col => ({
+      col,
+      allowed: new Set(
+        [...document.querySelectorAll(`.filter-cb[data-col="${col}"]`)]
+          .filter(cb => cb.checked).map(cb => Number(cb.value))
+      )
+    }));
+
+  // 範囲フィルタ収集
+  const rangeFilters = [];
+  document.querySelectorAll('#rangeFilterPanels .filter-panel[data-type="range"]').forEach(panel => {
+    const col = panel.dataset.col;
+    const conditions = [];
+    panel.querySelectorAll('.range-op').forEach(opSel => {
+      const which = opSel.dataset.which;
+      const op  = opSel.value;
+      const val = parseSI(panel.querySelector(`.range-val[data-which="${which}"]`).value);
+      if (op !== 'none' && isFinite(val)) conditions.push({op, val});
+    });
+    if (conditions.length > 0) rangeFilters.push({col, conditions});
+  });
+
+  document.getElementById('plotBtn').disabled = true;
+  document.getElementById('plotBtn').textContent = '計算中...';
+
+  worker.postMessage({
+    type: 'plot', xKey, yKeys, groupKey, cbFilters, rangeFilters,
+    maxPts, sortByX: chartType === 'smooth'
+  });
+});
+
+// ─── ピボット構築（X値で整列し、グループ／Y列を横持ちにする） ───────────────
+// 返り値: { xs: 昇順X値[], cols: 各データセット列[ [y...], ... ] }
+function buildPivot() {
+  const idxOf = new Map();   // X値 → 行インデックス
+  const xs = [];
+  for (const d of lastDatasets) {
+    for (let i = 0; i < d.x.length; i++) {
+      const xv = d.x[i];
+      if (!idxOf.has(xv)) { idxOf.set(xv, true); xs.push(xv); }
+    }
+  }
+  xs.sort((a, b) => a - b);
+  xs.forEach((xv, i) => idxOf.set(xv, i));
+
+  const cols = lastDatasets.map(d => {
+    const col = new Array(xs.length).fill(null);
+    for (let i = 0; i < d.x.length; i++) col[idxOf.get(d.x[i])] = d.y[i];
+    return col;
+  });
+  return { xs, cols };
+}
+
+// CSV用の数値フォーマット（生の値、指数は大文字E。ideal_table.csv と同形式）
+function fmtCsv(v) {
+  if (v == null || !isFinite(v)) return '';
+  return String(v).replace('e', 'E');
+}
+
+// ─── 表レンダリング（ピボット形式） ────────────────────────────────────────
+const TABLE_MAX_ROWS = 10000;
+
+function renderTable() {
+  const wrap     = document.getElementById('tableWrap');
+  const statusEl = document.getElementById('tableStatus');
+  const csvBtn   = document.getElementById('csvExportBtn');
+
+  if (!lastDatasets || lastDatasets.length === 0) {
+    wrap.innerHTML = '<p style="padding:20px;color:#999;text-align:center;">グラフを表示すると表が出ます</p>';
+    statusEl.textContent = '';
+    csvBtn.disabled = true;
+    return;
+  }
+
+  csvBtn.disabled = false;
+  const { xs, cols } = buildPivot();
+  const totalRows = xs.length;
+  const limit     = Math.min(totalRows, TABLE_MAX_ROWS);
+  const truncated = totalRows > TABLE_MAX_ROWS;
+
+  // ヘッダー: グループ使用時は2段（グループ値 ＋ Y列名）
+  let thead = '';
+  if (lastGroupKey) {
+    thead += '<tr><th>' + lastGroupKey + '</th>' +
+      lastDatasets.map(d => '<th>' + fmtNum(Number(d.group)) + '</th>').join('') + '</tr>';
+    thead += '<tr><th>' + lastXKey + '</th>' +
+      lastDatasets.map(d => '<th>' + d.yKey + '</th>').join('') + '</tr>';
+  } else {
+    thead += '<tr><th>' + lastXKey + '</th>' +
+      lastDatasets.map(d => '<th>' + d.yKey + '</th>').join('') + '</tr>';
+  }
+
+  const rows = [];
+  for (let i = 0; i < limit; i++) {
+    rows.push('<tr><td>' + fmtNum(xs[i]) + '</td>' +
+      cols.map(c => '<td>' + (c[i] == null ? '' : fmtNum(c[i])) + '</td>').join('') + '</tr>');
+  }
+  wrap.innerHTML = '<table class="data-table"><thead>' + thead + '</thead><tbody>' +
+    rows.join('') + '</tbody></table>';
+
+  statusEl.textContent = truncated
+    ? TABLE_MAX_ROWS.toLocaleString() + ' 行を表示（全 ' + totalRows.toLocaleString() + ' 行）'
+    : totalRows.toLocaleString() + ' 行';
+}
+
+// ─── CSV エクスポート（ピボット形式・ideal_table.csv と同形式） ─────────────
+document.getElementById('csvExportBtn').addEventListener('click', () => {
+  if (!lastDatasets || lastDatasets.length === 0) return;
+
+  const { xs, cols } = buildPivot();
+  const lines = [];
+
+  if (lastGroupKey) {
+    // 1段目: グループ列名 + 各グループ値 / 2段目: X列名 + Y列名
+    lines.push([lastGroupKey, ...lastDatasets.map(d => fmtCsv(Number(d.group)))].join(','));
+    lines.push([lastXKey,     ...lastDatasets.map(d => d.yKey)].join(','));
+  } else {
+    lines.push([lastXKey,     ...lastDatasets.map(d => d.yKey)].join(','));
+  }
+  for (let i = 0; i < xs.length; i++) {
+    lines.push([fmtCsv(xs[i]), ...cols.map(c => fmtCsv(c[i]))].join(','));
+  }
+
+  const blob = new Blob(['﻿' + lines.join('\r\n') + '\r\n'], {type: 'text/csv;charset=utf-8;'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = (currentFile ? currentFile.replace(/\.csv$/i, '') : 'data') + '_table.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+// ─── グラフ描画 ──────────────────────────────────────────────────────────
+function renderChart(datasets, filteredRows) {
+  document.getElementById('plotBtn').disabled = false;
+  document.getElementById('plotBtn').textContent = 'グラフ表示';
+
+  lastDatasets = datasets;
+  lastXKey     = document.getElementById('xAxis').value;
+  lastYKeys    = Array.from(document.getElementById('yAxis').selectedOptions).map(o => o.value);
+  lastGroupKey = document.getElementById('groupAxis').value || '';
+
+  if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+
+  if (datasets.length === 0) {
+    document.getElementById('logMsg').textContent = 'フィルタ条件に一致するデータがありません';
+    if (document.querySelector('.tab-btn[data-tab="table"]').classList.contains('active')) renderTable();
+    return;
+  }
+
+  const xKey   = document.getElementById('xAxis').value;
+  const yKeys  = Array.from(document.getElementById('yAxis').selectedOptions).map(o => o.value);
+  const xScale = document.getElementById('xScale').value;
+  const yScale = document.getElementById('yScale').value;
+  const isSmooth = chartType === 'smooth';
+  const type = chartType === 'scatter' ? 'scatter' : chartType === 'bar' ? 'bar' : 'line';
+
+  const chartDatasets = datasets.map((d, i) => {
+    const color = COLORS[i % COLORS.length];
+    const data = [];
+    for (let k = 0; k < d.x.length; k++) data.push({x: d.x[k], y: d.y[k]});
+    return {
+      label: d.label, data,
+      backgroundColor: color + (isSmooth ? '44' : '99'),
+      borderColor: color,
+      borderWidth: isSmooth ? 2 : 1.5,
+      pointRadius: isSmooth ? 0 : (type === 'scatter' ? 3 : 2),
+      tension: isSmooth ? 0.4 : 0,
+      cubicInterpolationMode: isSmooth ? 'monotone' : 'default',
+      fill: false,
+    };
+  });
+
+  const totalPts = chartDatasets.reduce((s, d) => s + d.data.length, 0);
+  document.getElementById('dataStatus').textContent =
+    `表示: ${totalPts.toLocaleString()} 点 (フィルタ後 ${filteredRows.toLocaleString()} 行)`;
+  document.getElementById('chartTitle').textContent =
+    `X: ${xKey}  /  Y: ${yKeys.join(', ')}`;
+
+  const ctx = document.getElementById('myChart').getContext('2d');
+  chartInstance = new Chart(ctx, {
+    type,
+    data: {datasets: chartDatasets},
+    options: {
+      animation: false,
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {position: 'top', labels: {boxWidth: 12, font: {size: 11}}},
+        tooltip: {
+          callbacks: {
+            label: c => ` ${c.dataset.label}: (${fmtNum(c.raw.x)}, ${fmtNum(c.raw.y)})`
+          }
+        }
+      },
+      scales: {
+        x: {
+          type: type === 'bar' ? 'category' : xScale,
+          title: {display: true, text: xKey, font: {size: 12}},
+          ticks: { callback: v => fmtNum(v) }
+        },
+        y: {
+          type: yScale,
+          title: {display: true, text: yKeys.join(', '), font: {size: 12}},
+          ticks: { callback: v => fmtNum(v) }
+        }
+      }
+    }
+  });
+
+  if (document.querySelector('.tab-btn[data-tab="table"]').classList.contains('active')) renderTable();
+}
+</script>
+</body>
+</html>
