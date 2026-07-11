@@ -12,7 +12,7 @@
 		<script src="http://css3-mediaqueries-js.googlecode.com/svn/trunk/css3-mediaqueries.js"></script>
 		<![endif]-->
   <script type="text/javascript" src="jquery-3.7.1.min.js"></script>
-  <script src="index_rev3.js"></script>
+  <script src="index_rev2.js"></script>
 </head>
 
 <body>
@@ -124,11 +124,6 @@
                 </div>
                 -->
 
-          <div class="check_wrap">
-            <button type="button" id="symAll">全選択</button>
-            <button type="button" id="symNone">全解除</button>
-          </div>
-
           <div class="check_wrap size_s">
             <input type="checkbox" id="Cbox10" name="str_style[]" value="10" checked="checked">
             <i class="shape checkbox"></i><label class="txt" for="Cbox10">!（感嘆符）</label>
@@ -184,12 +179,6 @@
             <i class="shape checkbox"></i><label class="txt" for="Cbox17">~（チルダ）</label>
           </div>
         </div>
-
-        <div class="check_wrap"><br></div>
-        <div class="check_wrap">
-          <span class="txt">使用できる文字：英数字 <span id="cntAlnum">--</span> 種類 ＋ 記号 <span id="cntSymbol">--</span> 種類 ＝ 合計 <span
-              id="cntTotal">--</span> 種類</span>
-        </div>
       </dd>
     </dl>
     <dl>
@@ -225,10 +214,6 @@
         <div class="check_wrap row">
           <input type="checkbox" id="Condition0" name="condition[]" value="0" checked="checked">
           <i class="shape checkbox"></i><label class="txt" for="Condition0">似通った英数字は省く</label>
-        </div>
-        <div class="check_wrap row">
-          <input type="checkbox" id="Condition1" name="condition[]" value="1">
-          <i class="shape checkbox"></i><label class="txt" for="Condition1">同じ文字を2回使わない（文字の種類数が文字数以上のときのみ有効）</label>
         </div>
       </dd>
     </dl>

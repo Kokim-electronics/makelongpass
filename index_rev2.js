@@ -22,37 +22,6 @@ function secureRandomInt(max) {
     return buf[0] % max;
 }
 
-// 記号チェックボックスを一括で設定する
-function setAllSymbols(checked) {
-    for (const id in SYMBOL_MAP) {
-        $("#" + id).prop("checked", checked);
-    }
-}
-
-// 現在の選択から使用できる文字の種類数を計算して表示する
-function updateKinds() {
-    let alnum = "";
-    if ($("#Cbox0").prop("checked")) alnum += UPPER;
-    if ($("#Cbox1").prop("checked")) alnum += LOWER;
-    if ($("#Cbox2").prop("checked")) alnum += DIGITS;
-
-    let symbols = "";
-    if ($("#Symbol1").prop("checked")) {
-        for (const id in SYMBOL_MAP) {
-            if ($("#" + id).prop("checked")) symbols += SYMBOL_MAP[id];
-        }
-    }
-
-    //似通った英数字（I l 1 O 0 o）を省く
-    if ($("#Condition0").prop("checked")) {
-        alnum = alnum.replace(/[Il1O0o]/g, "");
-    }
-
-    $("#cntAlnum").text(alnum.length);
-    $("#cntSymbol").text(symbols.length);
-    $("#cntTotal").text(alnum.length + symbols.length);
-}
-
 //disableとenableの切り替えとフォーカス
 
 window.onload = function () {
@@ -93,9 +62,6 @@ function disable() {
 
     document.getElementById("Symbol0").disabled = true;
     document.getElementById("Symbol1").disabled = true;
-
-    document.getElementById("symAll").disabled = true;
-    document.getElementById("symNone").disabled = true;
 }
 
 function enable() {
@@ -128,9 +94,6 @@ function enable() {
 
     document.getElementById("Symbol0").disabled = false;
     document.getElementById("Symbol1").disabled = false;
-
-    document.getElementById("symAll").disabled = false;
-    document.getElementById("symNone").disabled = false;
 }
 
 function d_focus() {
@@ -149,36 +112,107 @@ $(function () {
 
         $("#pulldown").addClass("open");
 
-        setAllSymbols(false);
+        $("#Cbox4").prop("checked", false);
+        $("#Cbox5").prop("checked", false);
+        $("#Cbox6").prop("checked", false);
+        $("#Cbox7").prop("checked", false);
+        $("#Cbox8").prop("checked", false);
+        $("#Cbox9").prop("checked", false);
+        $("#Cbox10").prop("checked", false);
+        $("#Cbox11").prop("checked", false);
+        $("#Cbox12").prop("checked", false);
+        $("#Cbox13").prop("checked", false);
+        $("#Cbox14").prop("checked", false);
+        $("#Cbox15").prop("checked", false);
+        $("#Cbox16").prop("checked", false);
+        $("#Cbox17").prop("checked", false);
+        $("#Cbox18").prop("checked", false);
+        $("#Cbox19").prop("checked", false);
+        $("#Cbox20").prop("checked", false);
+        $("#Cbox21").prop("checked", false);
+        $("#Cbox22").prop("checked", false);
+        $("#Cbox23").prop("checked", false);
+        $("#Cbox24").prop("checked", false);
+        $("#Cbox25").prop("checked", false);
         $(".size_s").css('display', 'block');
 
     } else {
 
         $("#pulldown").removeClass("open");
+        
+        /*
+        $("#Cbox4").prop("checked",true);
+        $("#Cbox5").prop("checked",true);
+        $("#Cbox6").prop("checked",true);
+        $("#Cbox7").prop("checked",true);
+        $("#Cbox8").prop("checked",true);
+        $("#Cbox9").prop("checked",true);
+        $("#Cbox10").prop("checked",true);
+        $("#Cbox11").prop("checked",true);
+        $("#Cbox12").prop("checked",true);
+        $("#Cbox13").prop("checked",true);
+        $("#Cbox14").prop("checked",true);
+        $("#Cbox15").prop("checked",true);
+        $("#Cbox16").prop("checked",true);
+        $("#Cbox17").prop("checked",true);
+        $("#Cbox18").prop("checked",true);
+        $("#Cbox19").prop("checked",true);
+        */
     }
 
     //ラジオボタンチェンジイベント
     $("#Symbol0").on("click", function () {
         $("#pulldown").addClass("open");
-        setAllSymbols(false);
-        updateKinds();
+
+        $("#Cbox4").prop("checked", false);
+        $("#Cbox5").prop("checked", false);
+        $("#Cbox6").prop("checked", false);
+        $("#Cbox7").prop("checked", false);
+        $("#Cbox8").prop("checked", false);
+        $("#Cbox9").prop("checked", false);
+        $("#Cbox10").prop("checked", false);
+        $("#Cbox11").prop("checked", false);
+        $("#Cbox12").prop("checked", false);
+        $("#Cbox13").prop("checked", false);
+        $("#Cbox14").prop("checked", false);
+        $("#Cbox15").prop("checked", false);
+        $("#Cbox16").prop("checked", false);
+        $("#Cbox17").prop("checked", false);
+        $("#Cbox18").prop("checked", false);
+        $("#Cbox19").prop("checked", false);
+        $("#Cbox20").prop("checked", false);
+        $("#Cbox21").prop("checked", false);
+        $("#Cbox22").prop("checked", false);
+        $("#Cbox23").prop("checked", false);
+        $("#Cbox24").prop("checked", false);
+        $("#Cbox25").prop("checked", false);
     });
 
     $("#Symbol1").on("click", function () {
         $("#pulldown").removeClass("open");
-        setAllSymbols(true);
-        updateKinds();
-    });
 
-    //記号の全選択・全解除ボタン
-    $("#symAll").on("click", function () {
-        setAllSymbols(true);
-        updateKinds();
-    });
-
-    $("#symNone").on("click", function () {
-        setAllSymbols(false);
-        updateKinds();
+        $("#Cbox4").prop("checked", true);
+        $("#Cbox5").prop("checked", true);
+        $("#Cbox6").prop("checked", true);
+        $("#Cbox7").prop("checked", true);
+        $("#Cbox8").prop("checked", true);
+        $("#Cbox9").prop("checked", true);
+        $("#Cbox10").prop("checked", true);
+        $("#Cbox11").prop("checked", true);
+        $("#Cbox12").prop("checked", true);
+        $("#Cbox13").prop("checked", true);
+        $("#Cbox14").prop("checked", true);
+        $("#Cbox15").prop("checked", true);
+        $("#Cbox16").prop("checked", true);
+        $("#Cbox17").prop("checked", true);
+        $("#Cbox18").prop("checked", true);
+        $("#Cbox19").prop("checked", true);
+        $("#Cbox20").prop("checked", true);
+        $("#Cbox21").prop("checked", true);
+        $("#Cbox22").prop("checked", true);
+        $("#Cbox23").prop("checked", true);
+        $("#Cbox24").prop("checked", true);
+        $("#Cbox25").prop("checked", true);
     });
 
     //Disable1 強力
@@ -194,8 +228,28 @@ $(function () {
 
         $("#pulldown").addClass("open");
 
-        setAllSymbols(false);
-        updateKinds();
+        $("#Cbox4").prop("checked", false);
+        $("#Cbox5").prop("checked", false);
+        $("#Cbox6").prop("checked", false);
+        $("#Cbox7").prop("checked", false);
+        $("#Cbox8").prop("checked", false);
+        $("#Cbox9").prop("checked", false);
+        $("#Cbox10").prop("checked", false);
+        $("#Cbox11").prop("checked", false);
+        $("#Cbox12").prop("checked", false);
+        $("#Cbox13").prop("checked", false);
+        $("#Cbox14").prop("checked", false);
+        $("#Cbox15").prop("checked", false);
+        $("#Cbox16").prop("checked", false);
+        $("#Cbox17").prop("checked", false);
+        $("#Cbox18").prop("checked", false);
+        $("#Cbox19").prop("checked", false);
+        $("#Cbox20").prop("checked", false);
+        $("#Cbox21").prop("checked", false);
+        $("#Cbox22").prop("checked", false);
+        $("#Cbox23").prop("checked", false);
+        $("#Cbox24").prop("checked", false);
+        $("#Cbox25").prop("checked", false);
     });
 
     //Disable2 最強
@@ -211,15 +265,29 @@ $(function () {
 
         $("#pulldown").removeClass("open");
 
-        setAllSymbols(true);
-        updateKinds();
+        $("#Cbox4").prop("checked", true);
+        $("#Cbox5").prop("checked", true);
+        $("#Cbox6").prop("checked", true);
+        $("#Cbox7").prop("checked", true);
+        $("#Cbox8").prop("checked", true);
+        $("#Cbox9").prop("checked", true);
+        $("#Cbox10").prop("checked", true);
+        $("#Cbox11").prop("checked", true);
+        $("#Cbox12").prop("checked", true);
+        $("#Cbox13").prop("checked", true);
+        $("#Cbox14").prop("checked", true);
+        $("#Cbox15").prop("checked", true);
+        $("#Cbox16").prop("checked", true);
+        $("#Cbox17").prop("checked", true);
+        $("#Cbox18").prop("checked", true);
+        $("#Cbox19").prop("checked", true);
+        $("#Cbox20").prop("checked", true);
+        $("#Cbox21").prop("checked", true);
+        $("#Cbox22").prop("checked", true);
+        $("#Cbox23").prop("checked", true);
+        $("#Cbox24").prop("checked", true);
+        $("#Cbox25").prop("checked", true);
     });
-
-    //チェックボックス・ラジオの手動変更でも種類数を更新する
-    $(".randam_selects").on("change", "input[type=checkbox], input[type=radio]", updateKinds);
-
-    //初期表示
-    updateKinds();
 
     //生成ボタン
     $("#make").on("click", function () {
@@ -260,19 +328,26 @@ $(function () {
             }
         }
 
-        //「同じ文字を2回使わない」は文字の種類数が文字数以上のときだけ可能
-        const unique = $("#Condition1").prop("checked");
-        const total = classes.join("").length;
-        if (unique && total < count) {
-            alert("「同じ文字を2回使わない」を有効にするには、文字の種類（現在 " + total + " 種類）が文字数（" + count + " 文字）以上必要です");
-            return;
-        }
-
+        const all = classes.join("");
         const playerList = document.getElementById("playerList");
         playerList.innerHTML = "";  // 一度表の中身を空にする
 
         for (let j = 0; j < 10; j++) {
-            const randomStr = generateOne(classes, count, unique);
+            //選択した各文字クラスから最低1文字を保証する
+            const chars = [];
+            for (const cls of classes) {
+                chars.push(cls[secureRandomInt(cls.length)]);
+            }
+            //残りは全文字プールから選ぶ（重複を許可してエントロピーを保つ）
+            while (chars.length < count) {
+                chars.push(all[secureRandomInt(all.length)]);
+            }
+            //Fisher–Yatesシャッフルで「先頭に各文字クラスが並ぶ」偏りを消す
+            for (let i = chars.length - 1; i > 0; i--) {
+                const k = secureRandomInt(i + 1);
+                [chars[i], chars[k]] = [chars[k], chars[i]];
+            }
+            const randomStr = chars.join("");
 
             const tempArr = [j + 1, randomStr, ""];
             const tr = document.createElement("tr");
@@ -289,48 +364,6 @@ $(function () {
         }
     });
 });
-
-//パスワードを1つ生成する
-function generateOne(classes, count, unique) {
-    //各クラスから最低1文字を保証する
-    //（文字数がクラス数より少ない場合は、ランダムに選んだクラスの分だけ保証する）
-    let gcls = classes.slice();
-    for (let i = gcls.length - 1; i > 0; i--) {
-        const k = secureRandomInt(i + 1);
-        [gcls[i], gcls[k]] = [gcls[k], gcls[i]];
-    }
-    if (gcls.length > count) gcls = gcls.slice(0, count);
-
-    const chars = [];
-    if (unique) {
-        //使った文字をプールから取り除きながら選ぶ
-        const pool = classes.join("").split("");
-        for (const cls of gcls) {
-            const c = cls[secureRandomInt(cls.length)];
-            chars.push(c);
-            pool.splice(pool.indexOf(c), 1);
-        }
-        while (chars.length < count) {
-            chars.push(pool.splice(secureRandomInt(pool.length), 1)[0]);
-        }
-    } else {
-        //重複を許可して全文字プールから選ぶ（エントロピーを保つ）
-        const all = classes.join("");
-        for (const cls of gcls) {
-            chars.push(cls[secureRandomInt(cls.length)]);
-        }
-        while (chars.length < count) {
-            chars.push(all[secureRandomInt(all.length)]);
-        }
-    }
-
-    //Fisher–Yatesシャッフルで「先頭に各文字クラスが並ぶ」偏りを消す
-    for (let i = chars.length - 1; i > 0; i--) {
-        const k = secureRandomInt(i + 1);
-        [chars[i], chars[k]] = [chars[k], chars[i]];
-    }
-    return chars.join("");
-}
 
 //https://gxy-life.com/2PC/PC/PC20211011.html
 //https://gxy-life.com/2PC/PC/PC20211010.html
