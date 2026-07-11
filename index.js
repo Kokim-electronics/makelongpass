@@ -1,3 +1,4 @@
+// github上で上書きしちゃうよ
 // 文字クラスの定義（削除方式ではなく追加方式で組み立てる）
 const UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const LOWER = "abcdefghijklmnopqrstuvwxyz";
